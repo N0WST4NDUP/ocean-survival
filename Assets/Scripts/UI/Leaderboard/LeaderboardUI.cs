@@ -65,7 +65,7 @@ public class LeaderboardUI : MonoBehaviour
         _rows.Clear();
 
         string myUid = (AuthManager.Instance.IsInitialized && AuthManager.Instance.IsLoggedIn)
-            ? AuthManager.Instance.CurrentUser.UserId
+            ? AuthManager.Instance.CurrentUserId
             : null;
 
         if (_content != null && _rowPrefab != null)
