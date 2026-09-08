@@ -132,18 +132,28 @@ main                              gh-pages (orphan)
 데이터 전용 타입 `LeaderboardEntry.cs`, `UserProfileData.cs`, `ClearTimeRecord.cs`,
 `TimeUtil.cs`는 Firebase 타입에 의존하지 않으면 수정 대상이 아니다. 구현 시 확인한다.
 
-### 5.3 수정하지 않는 호출부
+### 5.3 호출부
 
-아래 7개 파일은 한 줄도 변경하지 않는다. 변경이 필요해지면 5.1의 전제가 깨진 것이므로
-설계를 재검토한다.
+아래 6개 파일은 한 줄도 변경하지 않는다. `bool` / 튜플 / 이벤트 / `long` 만 사용하므로
+Firebase 타입에 노출되지 않는다.
 
 - `Assets/Scripts/Core/Singleton/GameManager(ClearTime).cs`
 - `Assets/Scripts/UI/GameResult/GameResultUI.cs`
-- `Assets/Scripts/UI/Leaderboard/LeaderboardUI.cs`
 - `Assets/Scripts/UI/Title/LoginUI.cs`
 - `Assets/Scripts/UI/Title/Logout.cs`
 - `Assets/Scripts/UI/Title/TitleUI.cs`
 - `Assets/Scripts/Test/LeaderboardTestRecorder.cs`
+
+**예외 1건**: `Assets/Scripts/UI/Leaderboard/LeaderboardUI.cs:68` 이
+`AuthManager.Instance.CurrentUser.UserId` 로 Firebase 타입 `FirebaseUser` 를 직접 만진다.
+매니저 밖에서 Firebase 타입을 쓰는 유일한 지점이다.
+
+대응: `AuthManager` 양쪽 분기에 `public string CurrentUserId` 래퍼를 두고, 이 한 줄을
+`AuthManager.Instance.CurrentUserId` 로 바꾼다. 플랫폼 분기가 UI로 새어나가지 않게 하는
+편이 옳으므로 이 변경은 폴백과 무관하게도 정당하다.
+
+위 7개 파일에서 이 한 줄 말고 다른 변경이 필요해지면 5.1의 전제가 깨진 것이므로
+설계를 재검토한다.
 
 ### 5.4 왜 인터페이스 추출이 아닌가
 
@@ -237,7 +247,7 @@ Unity WebGL 빌드 결과의 `index.html`은 그대로 `game/`에 넣고 수정�
 | ID | 파일명 | 위치 | 담아야 할 내용 | 길이 | 목표 용량 |
 |---|---|---|---|---|---|
 | G1 | `hero.gif` | 히어로 직하 | 다수의 적 한복판에서의 전투. 게임 정체성을 한 컷에 | 6~8초 | ≤ 2.5MB |
-| G2 | `component.gif` | 주요 시스템 | 드롭 획득 → 슬롯 장착 → 화력 변화 | 5~6초 | ≤ 2MB |
+| G2 | `component.gif` | 주요 시스템 | 드롭 경쟁 (GDD §5.5) — 네임드 처치 → 부품 드롭 → 플레이어와 다른 네임드의 흡수 경쟁 | 5~6초 | ≤ 2MB |
 | G3 | `levelup.gif` | 주요 시스템 | 레벨업 카드 3장 중 선택 → 즉시 반영 | 4~5초 | ≤ 1.5MB |
 | G4 | `boss.gif` | 주요 시스템 | Pirate Lord 페이즈 전환 | 6~8초 | ≤ 2.5MB |
 | S1 | `title.png` | 히어로 | 타이틀 화면 | — | ≤ 300KB |

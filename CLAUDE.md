@@ -24,6 +24,7 @@
 | [Docs/Balancing.md](Docs/Balancing.md) | 밸런싱 수치 기록. 영역 / 값 / 근거 3요소. GDD의 `❓` 값들이 확정되면 여기로 이동. |
 | [Docs/Boss/PirateLord.md](Docs/Boss/PirateLord.md) | Pirate Lord(해적왕) 보스 명세 — 페이즈/패턴/3페이즈 유령선 메커니즘. GDD §5.6 구체화. |
 | [Docs/superpowers/specs/2026-09-08-readme-webgl-deploy-design.md](Docs/superpowers/specs/2026-09-08-readme-webgl-deploy-design.md) | README 작성 + WebGL 빌드의 GitHub Pages 배포/임베드 설계. Firebase의 WebGL 미지원 대응 포함. |
+| [Docs/superpowers/plans/2026-09-08-readme-webgl-deploy.md](Docs/superpowers/plans/2026-09-08-readme-webgl-deploy.md) | 위 설계의 구현 계획 (11개 태스크). 실행 중 체크박스로 진행 추적. |
 
 > 새 문서를 추가하면 **이 표에 한 줄로** 등록한다. 표 외 위치에 흩어진 문서는 없도록 관리.
 
