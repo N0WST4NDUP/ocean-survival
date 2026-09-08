@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShipSurivor — 브라우저에서 플레이</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d1117;
+    --panel: #161b22;
+    --fg: #e6edf3;
+    --muted: #8b949e;
+    --line: #30363d;
+    --link: #58a6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 16px 56px;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header { margin-bottom: 20px; }
+  h1 { font-size: 1.9rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .tagline { color: var(--muted); margin: 0; }
+  .tagline a { color: var(--link); }
+
+  .frame {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+  }
+  .frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  .cols { display: flex; flex-wrap: wrap; gap: 32px; margin-top: 28px; }
+  .col { flex: 1 1 260px; min-width: 0; }
+  h2 { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.06em;
+       color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 7px 0; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; white-space: nowrap; padding-right: 18px; }
+
+  .note { color: var(--muted); font-size: 0.92rem; margin: 0 0 12px; }
+  .note strong { color: var(--fg); font-weight: 600; }
+  footer { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: 0.9rem; }
+  footer a { color: var(--link); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>ShipSurivor</h1>
+    <p class="tagline">
+      배를 몰고, 부품을 줍고, 해적왕을 잡는다 ·
+      <a href="https://github.com/N0WST4NDUP/ocean-survival">GitHub 저장소</a>
+    </p>
+  </header>
+
+  <div class="frame">
+    <iframe src="./game/index.html" title="ShipSurivor 플레이"
+            allow="autoplay; fullscreen"></iframe>
+  </div>
+
+  <div class="cols">
+    <div class="col">
+      <h2>조작</h2>
+      <table>
+        <tr><th>W 홀드</th><td>전진 — 떼면 감속</td></tr>
+        <tr><th>S / Ctrl</th><td>브레이크</td></tr>
+        <tr><th>A · D</th><td>선회</td></tr>
+        <tr><th>Esc</th><td>일시정지</td></tr>
+        <tr><th>사격</th><td>자동</td></tr>
+      </table>
+    </div>
+
+    <div class="col">
+      <h2>알아둘 것</h2>
+      <p class="note">배는 <strong>관성</strong>으로 움직입니다. 제자리 회피가 아니라
+        궤적을 미리 그려서 피하세요.</p>
+      <p class="note">3분을 버티면 <strong>해적왕</strong>이 등장합니다. 잡으면 클리어.</p>
+      <p class="note">첫 로딩에 약 60MB를 받습니다. 잠시 기다려 주세요.</p>
+    </div>
+  </div>
+
+  <footer>
+    <p>웹 데모는 게스트 모드로 동작합니다. 기록은 이 브라우저에만 저장되며,
+      계정 로그인과 전체 유저 순위표는 PC 버전에서 지원합니다.</p>
+    <p><strong>Chrome을 권장합니다.</strong> 일부 브라우저는 이 빌드의 오디오 포맷을
+      디코딩하지 못해 소리가 나지 않습니다.</p>
+  </footer>
+
+</div>
+</body>
+</html>
