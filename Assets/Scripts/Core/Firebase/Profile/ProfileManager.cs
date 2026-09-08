@@ -1,3 +1,100 @@
+#if UNITY_WEBGL
+
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+
+// WebGL 폴백: 프로필을 LocalStore(PlayerPrefs)에 저장한다.
+public class ProfileManager : MonoBehaviour
+{
+    // --- Singleton ------------------------------
+    private static ProfileManager _instance;
+    public static ProfileManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<ProfileManager>();
+
+                if (_instance == null)
+                {
+                    var singletonObject = new GameObject();
+                    _instance = singletonObject.AddComponent<ProfileManager>();
+                    singletonObject.name = typeof(ProfileManager).ToString() + " (Singleton)";
+                }
+            }
+            return _instance;
+        }
+    }
+
+    private void Awake()
+    {
+        if (_instance == null)
+        {
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+
+            _cachedProfile = BuildLocalProfile();
+            IsInitialized = true;
+            Debug.Log($"[Profile] WebGL 로컬 프로필: {_cachedProfile.nickname}");
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (_instance == this)
+        {
+            _instance = null;
+        }
+    }
+
+    // --- Profile ------------------------------
+    private UserProfileData _cachedProfile;
+    public UserProfileData CachedProfile => _cachedProfile;
+
+    public bool IsInitialized { get; private set; } = false;
+
+    // UserProfileData 생성자가 createdAt을 현재 시각으로 채우므로,
+    // 매번 갱신되지 않도록 LocalStore에 보관된 값으로 덮어쓴다.
+    private UserProfileData BuildLocalProfile()
+    {
+        var profile = new UserProfileData(LocalStore.Nickname, LocalStore.Email);
+        profile.createdAt = LocalStore.CreatedAtMillis;
+        return profile;
+    }
+
+    public UniTask<bool> WaitForInitializationAsync()
+    {
+        return UniTask.FromResult(true);
+    }
+
+    public UniTask<(bool success, string error)> SaveProfileAsync(string nickname)
+    {
+        LocalStore.Nickname = nickname;
+        _cachedProfile = BuildLocalProfile();
+        return UniTask.FromResult<(bool, string)>((true, null));
+    }
+
+    public UniTask<(UserProfileData profile, string error)> LoadProfileAsync()
+    {
+        _cachedProfile = BuildLocalProfile();
+        return UniTask.FromResult<(UserProfileData, string)>((_cachedProfile, null));
+    }
+
+    public UniTask<(bool success, string error)> UpdateNicknameAsync(string nickname)
+    {
+        LocalStore.Nickname = nickname;
+        if (_cachedProfile != null) _cachedProfile.nickname = nickname;
+        return UniTask.FromResult<(bool, string)>((true, null));
+    }
+}
+
+#else
+
 using System;
 using Cysharp.Threading.Tasks;
 using Firebase.Database;
@@ -184,3 +281,5 @@ public class ProfileManager : MonoBehaviour
         return profileReady && authReady;
     }
 }
+
+#endif
