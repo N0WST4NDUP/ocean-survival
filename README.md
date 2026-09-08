@@ -80,8 +80,7 @@
 클리어 타임이 남는다. 개인 최고 기록과 전체 순위표에 올라간다.
 
 <p align="center">
-  <img src="Docs/images/leaderboard.png" width="45%" alt="리더보드">
-  <img src="Docs/images/result.png" width="45%" alt="결과 화면">
+  <img src="Docs/images/result.png" width="70%" alt="클리어 결과 화면">
 </p>
 
 ## 플레이하기
