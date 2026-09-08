@@ -1,3 +1,112 @@
+#if UNITY_WEBGL
+
+using System;
+using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+
+// WebGL 폴백: 클리어 타임을 LocalStore(PlayerPrefs)에 저장한다.
+// best는 최소값(빠를수록 상위), history는 최신순 LocalStore.HistoryCapacity개.
+public class RecordManager : MonoBehaviour
+{
+    // --- Singleton ------------------------------
+    private static RecordManager _instance;
+    public static RecordManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<RecordManager>();
+
+                if (_instance == null)
+                {
+                    var singletonObject = new GameObject();
+                    _instance = singletonObject.AddComponent<RecordManager>();
+                    singletonObject.name = typeof(RecordManager).ToString() + " (Singleton)";
+                }
+            }
+            return _instance;
+        }
+    }
+
+    private void Awake()
+    {
+        if (_instance == null)
+        {
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+
+            _cachedBestMs = LocalStore.LoadBestMs();
+            IsInitialized = true;
+            Debug.Log($"[Record] WebGL 로컬 기록 로드: {_cachedBestMs}ms");
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (_instance == this)
+        {
+            _instance = null;
+        }
+    }
+
+    // --- Record ------------------------------
+    private long _cachedBestMs = LocalStore.NoRecord;
+    public long CachedBestMs => _cachedBestMs;
+    public bool HasBest => _cachedBestMs >= 0;
+
+    public bool IsInitialized { get; private set; } = false;
+
+    public UniTask<bool> WaitForInitializationAsync()
+    {
+        return UniTask.FromResult(true);
+    }
+
+    // 클리어 기록 저장: history 누적 + 더 빠르면 best 갱신.
+    public UniTask<(bool success, bool isNewBest, long bestMs)> SaveClearTimeAsync(float clearTimeSeconds)
+    {
+        long ms = (long)Math.Round(clearTimeSeconds * 1000.0);
+
+        LocalStore.AppendHistory(ms);
+
+        bool isNewBest = !HasBest || ms < _cachedBestMs;
+        if (isNewBest)
+        {
+            _cachedBestMs = ms;
+            LocalStore.SaveBestMs(ms);
+
+            // Firebase 경로와 동일하게 신기록을 리더보드에도 알린다.
+            // 로컬 리더보드는 히스토리에서 파생되므로 실제로는 갱신 통지만 한다.
+            LeaderboardManager.Instance.SaveToLeaderboardAsync(ms).Forget();
+        }
+
+        Debug.Log($"[Record] WebGL 로컬 저장 (신기록: {isNewBest}, best: {_cachedBestMs}ms)");
+        return UniTask.FromResult((true, isNewBest, _cachedBestMs));
+    }
+
+    // 베스트(최소 ms) 로드. 기록 없으면 -1.
+    public UniTask<long> LoadBestMsAsync()
+    {
+        _cachedBestMs = LocalStore.LoadBestMs();
+        return UniTask.FromResult(_cachedBestMs);
+    }
+
+    // 최근 클리어 기록 N개 (최신순).
+    public UniTask<List<ClearTimeRecord>> LoadHistoryAsync(int limit = 10)
+    {
+        List<ClearTimeRecord> all = LocalStore.LoadHistory();
+        if (all.Count > limit) all.RemoveRange(limit, all.Count - limit);
+        return UniTask.FromResult(all);
+    }
+}
+
+#else
+
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
@@ -202,3 +311,5 @@ public class RecordManager : MonoBehaviour
         return recordReady && authReady;
     }
 }
+
+#endif
