@@ -30,56 +30,57 @@
 
 따라서 각 태스크는 **검증 우선(verification-first)** 루프를 따른다: 검증 방법을 먼저 정하고 → 지금 실패하는지 확인하고 → 구현하고 → 통과를 확인하고 → 커밋한다. 검증 수단은 컴파일 결과와 Play 모드 관찰이다. TDD의 순서를 유지하되 테스트 러너 대신 컴파일러와 에디터를 사용한다.
 
+**에러가 늘었다가 줄어드는 것이 정상이다.** Task 1에서 확인했듯 시작 시점의 에디터
+컴파일 에러는 0이다. Task 3에서 `FirebaseInitializer` 를 가드하면 그 WebGL 분기에는
+`App` / `Database` / `Auth` 프로퍼티가 없으므로, 이를 참조하는 나머지 매니저 4개에서
+에러가 **새로 발생한다**. 이것은 실수가 아니라 이 계획이 만들어내는 실패 신호다.
+Task 4~7이 그 에러를 하나씩 지우고, Task 7 종료 시 다시 0이 된다.
+
+| 시점 | 에디터 컴파일 에러 |
+| --- | --- |
+| Task 1~2 종료 | 0 |
+| Task 3 종료 | Auth / Profile / Record / Leaderboard 4개 파일 |
+| Task 4 종료 | Profile / Record / Leaderboard 3개 파일 |
+| Task 5 종료 | Record / Leaderboard 2개 파일 |
+| Task 6 종료 | Leaderboard 1개 파일 |
+| Task 7 종료 | **0** + Play 모드에서 폴백 로그 확인 |
+
 ---
 
-### Task 1: WebGL 컴파일 실패를 눈으로 확인한다
+### Task 1: 베이스라인 확정 (완료)
 
-이 태스크의 산출물은 코드가 아니라 **정확한 실패 목록**이다. 이후 태스크들이 이 목록을 하나씩 지운다.
+**실행 결과 (2026-09-08):** Web 프로필로 전환했으나 에디터 Console에 컴파일
+에러가 **0개**였다. 계획 초안이 예상한 `CS0246` 은 나오지 않았다.
 
-**Files:**
-- 없음 (에디터 조작 + 기록만)
+원인은 플러그인 플랫폼 설정이다. `Assets/Firebase/Plugins/*.dll.meta` 는 다음과 같다.
 
-**Interfaces:**
-- Consumes: 없음
-- Produces: `Docs/superpowers/plans/webgl-compile-errors.txt` — 이후 태스크의 진행 판정 기준
-
-- [ ] **Step 1: 현재 브랜치와 워킹트리 확인**
-
-```bash
-git branch --show-current   # docs/readme-webgl-deploy 여야 함
-git status -s               # 비어 있어야 함
+```yaml
+Any:    enabled: 0
+Editor: enabled: 1     # 에디터용 어셈블리는 이 DLL을 링크한다
+Web:    enabled: 0     # Web 플레이어 빌드에서는 제외된다
 ```
 
-- [ ] **Step 2: WebGL로 플랫폼 전환**
+에디터가 조용한 이유는 에디터 변형이 `Editor: enabled: 1` 인 DLL로 `using Firebase` 를
+해결하기 때문이다. 실제 Web 빌드는 이 DLL 없이 `Assembly-CSharp` 을 다시 컴파일하므로
+`CS0246` 이 **빌드 시점에** 발생한다. 실패가 사라진 것이 아니라 뒤로 밀려 있다.
 
-에디터: `File > Build Profiles > WebGL > Switch Platform`
+이 `.meta` 설정 자체가 "Firebase는 Web에서 쓸 수 없다"는 결정적 증거이므로, 베이스라인
+확보를 위해 실패하는 빌드를 따로 돌리지 않는다.
 
-에셋 재임포트에 10~20분 걸린다. 이 시간에는 에디터를 건드리지 않는다.
+**검증 신호 변경:** 현재 활성 타깃이 Web이라 에디터에도 `UNITY_WEBGL` 이 정의되어 있다.
+따라서 가드를 넣는 즉시 에디터 Play 모드가 폴백 분기를 실행한다. Task 3~7의 검증은
+**Play 모드 Console 로그**로 한다 — 태스크마다 빌드를 돌릴 필요가 없다.
 
-- [ ] **Step 3: 컴파일 에러 수집**
+| 확인할 로그 | 의미 |
+| --- | --- |
+| `[Firebase] WebGL 폴백 모드 — 로컬 저장소를 사용합니다.` | 가드가 살아 있다 |
+| `[Firebase] 초기화 시작...` | 가드가 안 먹었다. 활성 타깃이 Web인지 다시 볼 것 |
 
-에디터 Console에서 에러를 전부 복사해 저장한다.
+**무시해도 되는 경고 2개** (이번 작업과 무관, 기존부터 존재):
 
-```bash
-mkdir -p Docs/superpowers/plans
-# Console 내용을 아래 파일에 붙여넣는다
-# Docs/superpowers/plans/webgl-compile-errors.txt
-```
-
-기대: `Assets/Scripts/Core/Firebase/` 하위 5개 파일에서 `Firebase`, `Firebase.Auth`, `Firebase.Database` 네임스페이스를 찾을 수 없다는 `CS0246` 계열 에러가 나온다.
-
-에러가 **하나도 없다면** 멈추고 보고할 것. Firebase 관리 어셈블리가 WebGL에서도 링크되고 있다는 뜻이고, 그렇다면 실패는 런타임으로 미뤄지므로 검증 전략을 바꿔야 한다.
-
-- [ ] **Step 4: 커밋**
-
-```bash
-git add Docs/superpowers/plans/webgl-compile-errors.txt
-git commit -m "Docs: WebGL 컴파일 실패 목록 기록
-
-이후 폴백 작업의 진행 판정 기준.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
-```
+- `LoginUI.cs(48,30) CS1998` — `UpdateUI()` 가 `async UniTaskVoid` 인데 `await` 가 없다
+- `Could not locate google-services.json` — Firebase Editor 도구가 Android/iOS 설정 파일을
+  찾는 경고. 이 프로젝트는 `FirebaseConfig` ScriptableObject의 `databaseUrl` 을 쓴다
 
 ---
 
@@ -266,7 +267,7 @@ public static class LocalStore
 
 에디터로 돌아가 컴파일이 끝날 때까지 기다린다. Console에 `LocalStore` 관련 에러가 없어야 한다.
 
-`Docs/superpowers/plans/webgl-compile-errors.txt` 의 에러 개수는 아직 그대로다 (이 태스크는 매니저를 건드리지 않았다).
+에디터 컴파일 에러는 여전히 0개다 (이 태스크는 매니저를 건드리지 않았다).
 
 - [ ] **Step 4: 커밋**
 
@@ -393,7 +394,14 @@ public class FirebaseInitializer : MonoBehaviour
 
 - [ ] **Step 3: 컴파일 확인**
 
-에디터 Console에서 `FirebaseInitializer.cs` 관련 에러가 사라졌는지 확인한다. 다른 4개 매니저의 에러는 아직 남아 있다.
+`FirebaseInitializer.cs` 자체에는 에러가 없어야 한다.
+
+동시에 나머지 매니저 4개(`AuthManager`, `ProfileManager`, `RecordManager`,
+`LeaderboardManager`)에서 `FirebaseInitializer.Instance.Auth` / `.Database` 를 찾을 수 없다는
+에러가 **새로 나타난다**. 이것이 기대한 결과다 — WebGL 분기에는 그 프로퍼티가 없기 때문이다.
+Task 4~7이 이 에러들을 지운다.
+
+4개가 아닌 다른 파일에서 에러가 나면 멈추고 보고할 것.
 
 - [ ] **Step 4: 커밋**
 
@@ -603,7 +611,11 @@ public class AuthManager : MonoBehaviour
 
 - [ ] **Step 5: 컴파일 확인**
 
-`AuthManager.cs` 와 `LeaderboardUI.cs` 관련 에러가 사라졌는지 Console에서 확인한다.
+`AuthManager.cs` 와 `LeaderboardUI.cs` 의 에러가 사라졌는지 Console에서 확인한다.
+
+남아 있어야 할 에러: `ProfileManager`, `RecordManager`, `LeaderboardManager` 3개 파일.
+이들은 `FirebaseInitializer.Instance.Database` 와 `AuthManager.Instance.CurrentUser` 를
+참조하는데 둘 다 WebGL 분기에는 없다. Task 5~7에서 해소된다.
 
 - [ ] **Step 6: 커밋**
 
@@ -753,7 +765,9 @@ public class ProfileManager : MonoBehaviour
 
 - [ ] **Step 3: 컴파일 확인**
 
-`ProfileManager.cs` 관련 에러가 사라졌는지 확인한다.
+`ProfileManager.cs` 의 에러가 사라졌는지 확인한다.
+
+남아 있어야 할 에러: `RecordManager`, `LeaderboardManager` 2개 파일.
 
 - [ ] **Step 4: 커밋**
 
@@ -901,7 +915,9 @@ public class RecordManager : MonoBehaviour
 
 - [ ] **Step 3: 컴파일 확인**
 
-`RecordManager.cs` 관련 에러가 사라졌는지 확인한다.
+`RecordManager.cs` 의 에러가 사라졌는지 확인한다.
+
+남아 있어야 할 에러: `LeaderboardManager` 1개 파일.
 
 - [ ] **Step 4: 커밋**
 
@@ -920,7 +936,6 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `Assets/Scripts/Core/Firebase/Leaderboard/LeaderboardManager.cs`
-- Delete: `Docs/superpowers/plans/webgl-compile-errors.txt` (역할 종료)
 
 **Interfaces:**
 - Consumes: `LocalStore.LoadLeaderboard(int)` (Task 2)
@@ -1066,7 +1081,7 @@ public class LeaderboardManager : MonoBehaviour
 
 에디터 Console을 Clear한 뒤 재컴파일한다 (`Assets > Refresh`, 단축키 `Ctrl+R`).
 
-기대: 에러 0개. `Docs/superpowers/plans/webgl-compile-errors.txt` 의 모든 항목이 해소되었다.
+기대: 에러 0개. Task 3에서 새로 생겼던 에러가 전부 해소되었다.
 
 에러가 남아 있으면 그 파일을 이 계획에 없는 새 항목으로 간주하고 멈춰서 보고할 것.
 
@@ -1091,7 +1106,6 @@ public class LeaderboardManager : MonoBehaviour
 - [ ] **Step 6: 커밋**
 
 ```bash
-git rm Docs/superpowers/plans/webgl-compile-errors.txt
 git add Assets/Scripts/Core/Firebase/Leaderboard/LeaderboardManager.cs
 git commit -m "Feat: LeaderboardManager WebGL 로컬 폴백
 
@@ -1124,16 +1138,26 @@ grep -E "webGLCompressionFormat|webGLDecompressionFallback" ProjectSettings/Proj
 
 - [ ] **Step 2: 에디터에서 설정 변경**
 
-```
-File > Build Profiles > WebGL > Switch Platform      (재임포트 10~20분)
+Unity 6은 플랫폼 표시명이 "WebGL"이 아니라 **"Web"** 이다 (스크립팅 심볼은 `UNITY_WEBGL`
+그대로). 프로필은 `Web - Desktop - Release` 를 쓴다.
 
-Edit > Project Settings > Player > WebGL 탭 > Publishing Settings
-  Compression Format      = Brotli
-  Decompression Fallback  = 체크 ON
-
-Edit > Project Settings > Player > WebGL 탭 > Other Settings
-  Strip Engine Code       = 체크 ON
 ```
+File > Build Profiles > Web - Desktop - Release > Switch Platform   (재임포트 10~20분)
+
+같은 창의 Player Settings 섹션에서:
+  Publishing Settings ▶
+    Compression Format      = Brotli
+    Decompression Fallback  = 체크 ON
+  Other Settings ▶
+    Strip Engine Code       = 체크 ON
+
+Platform Settings (Web) 상단:
+  Code Optimization       = Disk Size with LTO   (기본값. 그대로 두면 된다)
+  Development Build       = 해제                  (배포용이므로)
+```
+
+Task 7에서 Windows로 회귀 확인을 했다면 여기서 Web으로 되돌아온다. 이미 Web이 활성이고
+설정도 되어 있으면 Step 3으로 건너뛴다.
 
 - [ ] **Step 3: 설정이 반영됐는지 확인**
 
