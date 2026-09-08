@@ -1,3 +1,118 @@
+#if UNITY_WEBGL
+
+using System;
+using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+
+// WebGL 폴백: 이 기기의 로컬 기록만으로 리더보드를 구성한다.
+// 전체 유저 랭킹이 아니라는 점은 랜딩 페이지 안내가 담당한다.
+public class LeaderboardManager : MonoBehaviour
+{
+    // 로컬 리더보드에 표시할 최대 항목 수 (spec §5.2).
+    private const int LocalLeaderboardLimit = 10;
+
+    // --- Singleton ------------------------------
+    private static LeaderboardManager _instance;
+    public static LeaderboardManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<LeaderboardManager>();
+
+                if (_instance == null)
+                {
+                    var singletonObject = new GameObject();
+                    _instance = singletonObject.AddComponent<LeaderboardManager>();
+                    singletonObject.name = typeof(LeaderboardManager).ToString() + " (Singleton)";
+                }
+            }
+            return _instance;
+        }
+    }
+
+    private void Awake()
+    {
+        if (_instance == null)
+        {
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+
+            IsInitialized = true;
+            Debug.Log("[Leaderboard] WebGL 로컬 리더보드 모드.");
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        StopRealtimeListener();
+        if (_instance == this)
+        {
+            _instance = null;
+        }
+    }
+
+    // --- Leaderboard ------------------------------
+    private bool _isListenerActive;
+
+    public bool IsInitialized { get; private set; } = false;
+
+    // 갱신 콜백 (UI가 구독). 메인스레드에서 호출됨.
+    public event Action<List<LeaderboardEntry>> OnLeaderboardUpdated;
+
+    public UniTask<bool> WaitForInitializationAsync()
+    {
+        return UniTask.FromResult(true);
+    }
+
+    // 로컬에서는 기록 저장 시점에 이미 LocalStore에 반영되므로 갱신 통지만 한다.
+    public UniTask<(bool success, string error)> SaveToLeaderboardAsync(long clearTimeMs)
+    {
+        if (_isListenerActive)
+        {
+            OnLeaderboardUpdated?.Invoke(LocalStore.LoadLeaderboard(LocalLeaderboardLimit));
+        }
+        return UniTask.FromResult<(bool, string)>((true, null));
+    }
+
+    // 가장 빠른 N개 1회 조회 (오름차순).
+    public UniTask<List<LeaderboardEntry>> LoadLeaderboardAsync(int limit = 10)
+    {
+        return UniTask.FromResult(LocalStore.LoadLeaderboard(limit));
+    }
+
+    // --- 실시간 동기화 ------------------------------
+    // 로컬 저장소에는 외부 변경이 없으므로, 구독 시작 시 현재 값을 한 번 발행한다.
+    public void StartRealtimeListener(int limit = 10)
+    {
+        if (_isListenerActive) return;
+
+        _isListenerActive = true;
+        DispatchOnceAsync(limit).Forget();
+        Debug.Log("[Leaderboard] WebGL 로컬 리더보드 발행");
+    }
+
+    private async UniTaskVoid DispatchOnceAsync(int limit)
+    {
+        // 호출 직후 구독하는 UI가 놓치지 않도록 한 프레임 미룬다.
+        await UniTask.Yield();
+        OnLeaderboardUpdated?.Invoke(LocalStore.LoadLeaderboard(limit));
+    }
+
+    public void StopRealtimeListener()
+    {
+        _isListenerActive = false;
+    }
+}
+
+#else
+
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
@@ -206,3 +321,5 @@ public class LeaderboardManager : MonoBehaviour
         return string.IsNullOrEmpty(displayName) ? "익명" : displayName;
     }
 }
+
+#endif

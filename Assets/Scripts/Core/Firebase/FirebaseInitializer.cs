@@ -1,3 +1,76 @@
+#if UNITY_WEBGL
+
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+
+// WebGL 폴백: Firebase Unity SDK는 WebGL 네이티브 바이너리를 제공하지 않으므로
+// (Assets/Firebase/Plugins/*.dll.meta 가 Web: enabled 0) 초기화를 즉시 성공 처리하고,
+// 실제 데이터는 LocalStore가 담당한다.
+public class FirebaseInitializer : MonoBehaviour
+{
+    private static FirebaseInitializer _instance;
+    public static FirebaseInitializer Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<FirebaseInitializer>();
+
+                if (_instance == null)
+                {
+                    var singletonObject = new GameObject();
+                    _instance = singletonObject.AddComponent<FirebaseInitializer>();
+                    singletonObject.name = typeof(FirebaseInitializer).ToString() + " (Singleton)";
+                }
+            }
+            return _instance;
+        }
+    }
+
+    public enum InitState
+    {
+        Pending,
+        Ready,
+        Failed,
+    }
+
+    public InitState State { get; private set; } = InitState.Ready;
+    public bool IsReady => State == InitState.Ready;
+    public string LastError { get; private set; }
+
+    private void Awake()
+    {
+        if (_instance == null)
+        {
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+
+            State = InitState.Ready;
+            Debug.Log("[Firebase] WebGL 폴백 모드 — 로컬 저장소를 사용합니다.");
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    public UniTask<bool> WaitForInitializationAsync()
+    {
+        return UniTask.FromResult(true);
+    }
+
+    private void OnDestroy()
+    {
+        if (_instance == this)
+        {
+            _instance = null;
+        }
+    }
+}
+
+#else
+
 using Cysharp.Threading.Tasks;
 using Firebase;
 using Firebase.Auth;
@@ -118,3 +191,5 @@ public class FirebaseInitializer : MonoBehaviour
         }
     }
 }
+
+#endif

@@ -169,3 +169,7 @@ Packages/packages-lock.json linguist-generated
 
 # Exceptions for .asset files such as lightning pre-baking
 LightingData.asset     binary
+# README 미디어는 일반 git 객체로 저장한다.
+# LFS로 두면 조회마다 대역폭(무료 1GB/월)을 소모하고, 초과 시 README 이미지가
+# 통째로 깨진다. 포트폴리오에서 가장 치명적인 실패 모드이므로 예외로 뺀다.
+/Docs/images/**         !filter !diff !merge -text
