@@ -23,6 +23,7 @@
 | [Docs/GDD.md](Docs/GDD.md) | 게임 디자인 문서. 코어 루프 / 메커닉 / 시스템 / 마일스톤 / 리스크. **모든 디자인 의사결정의 근거.** |
 | [Docs/Balancing.md](Docs/Balancing.md) | 밸런싱 수치 기록. 영역 / 값 / 근거 3요소. GDD의 `❓` 값들이 확정되면 여기로 이동. |
 | [Docs/Boss/PirateLord.md](Docs/Boss/PirateLord.md) | Pirate Lord(해적왕) 보스 명세 — 페이즈/패턴/3페이즈 유령선 메커니즘. GDD §5.6 구체화. |
+| [Docs/superpowers/specs/2026-09-08-readme-webgl-deploy-design.md](Docs/superpowers/specs/2026-09-08-readme-webgl-deploy-design.md) | README 작성 + WebGL 빌드의 GitHub Pages 배포/임베드 설계. Firebase의 WebGL 미지원 대응 포함. |
 
 > 새 문서를 추가하면 **이 표에 한 줄로** 등록한다. 표 외 위치에 흩어진 문서는 없도록 관리.
 
